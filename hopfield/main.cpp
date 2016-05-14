@@ -16,21 +16,16 @@ using namespace cv;
 
 // Kind of template typedef
 template <typename T> class matrix : public std::vector<std::vector<T> > {};
-typedef matrix<int> Representation;
+typedef vector<int> Representation;
 typedef vector<Representation> Representations;
 typedef vector<Mat> Images;
 
 
-void img2representation(Mat& img, Representation& representation, int threshold = 180)
-{
-    representation.resize(img.rows);
-    for(int y = 0; y < img.rows; ++y) {
-        representation[y].resize(img.cols);
-        for(int x = 0; x < img.cols; ++x) {
-            representation[y][x] = img.at<uchar>(y, x) < 180 ? -1 : 1;
-        }
-    }
-}
+void teach(Representations& , matrix<int>&);
+
+int weight(Representations& representations, int y, int x);
+void img2representation(Mat& img, Representation& representation, int threshold = 180);
+void inspect_matrix(matrix<int>& mt);
 
 int main(int argc, char *argv[])
 {
@@ -48,16 +43,15 @@ int main(int argc, char *argv[])
         img2representation(images[i], representations[i]);
 
 
-    /* _setmode(_fileno(stdout), _O_U16TEXT); */
-    for(int i = 0; i < representations.size(); ++i) {
-        for (int j = 0; j < representations[i].size(); ++j) {
-            for (int k = 0; k < representations[i][j].size(); ++k) {
-                std::cout << (representations[i][j][k] == 1 ? " " : "█");
-            }
-            puts("");
-        }
-        puts("");
-    }
+    matrix<int> weights;
+    teach(representations, weights);
+
+    matrix<int> weights2(weights);
+    teach(representations, weights2);
+
+    inspect_matrix(weights);
+    puts("");
+    inspect_matrix(weights2);
 
     /* img2representation(); */
     /* img = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE); */
@@ -69,3 +63,66 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+void print_images(Images& images)
+{
+    for(int i = 0; i < images.size(); ++i) {
+        for (int j = 0; j < images[i].rows; ++j) {
+            for (int k = 0; k < images[i].cols; ++k) {
+                std::cout << (images[i].at<uchar>(j,k) > 180 ? " " : "█");
+            }
+            puts("");
+        }
+        puts("");
+    }
+}
+
+
+void inspect_matrix(matrix<int>& mt)
+{
+    for(int i = 0; i < mt.size(); ++i) {
+        for (int j = 0; j < mt[i].size(); ++j) {
+             printf("%3d", mt[i][j]);
+        }
+        puts("");
+    }
+}
+
+void teach(Representations& representations, matrix<int>& weights)
+{
+    int neurons_count = 10;
+
+    weights.resize(neurons_count);
+    for(int y = 0; y < neurons_count; ++y) {
+        weights[y].resize(neurons_count);
+        for(int x = 0; x < neurons_count; ++x) {
+            weights[y][x] = weight(representations, y, x);
+        }
+    }
+
+}
+
+int weight(Representations& representations, int y, int x)
+{
+    if(x == y) {
+        return 0;
+    } else {
+        int sum = 0;
+        for (Representations::iterator r = representations.begin();  r != representations.end(); ++r) {
+            sum += (*r)[x] + (*r)[y];
+        }
+        return sum;
+    }
+}
+
+void img2representation(Mat& img, Representation& representation, int threshold)
+{
+    representation.resize(img.rows * img.cols);
+    int i = 0;
+    for(int y = 0; y < img.rows; ++y) {
+        /* representation[y].resize(img.cols); */
+        for(int x = 0; x < img.cols; ++x) {
+            representation[i] = img.at<uchar>(y, x) < 180 ? -1 : 1;
+            i++;
+        }
+    }
+}
