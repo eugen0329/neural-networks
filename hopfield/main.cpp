@@ -8,6 +8,7 @@
 #include <clocale>
 #include <dirent.h>
 
+#include "representation.h"
 
 /* #include <io.h> */
 /* #include <fcntl.h> */
@@ -19,38 +20,19 @@ using namespace cv;
 
 // Kind of template typedef
 template <typename T> class matrix : public std::vector<std::vector<T> > {};
-typedef vector<int> Representation;
+/* typedef vector<int> Representation; */
 typedef vector<Representation> Representations;
 typedef Mat Image;
 typedef vector<Image> Images;
 
 
-void teach(Representations& , matrix<int>&);
+void teach(Representations& representations, matrix<int>& weights);
 
 int weight(Representations& representations, int y, int x);
 void img2representation(Mat& img, Representation& representation, int threshold = 180);
-void inspect_matrix(matrix<int>& mt);
-void inspect_representation(Representation& r, int rowSize);
+/* void inspect_matrix(matrix<int>& mt); */
 int linearActivationFunction(int x);
 
-void bipolar_inverse(int& val)
-{
-    val = (val == 1 ? -1 : 1);
-}
-
-void apply_noise(Representation& r, float percent)
-{
-    vector<int> indexes(r.size());
-    for(int i = 0; i < r.size(); ++i)
-        indexes[i] = i;
-    random_shuffle(indexes.begin(), indexes.end());
-
-    vector<int>::iterator lim = indexes.begin();
-    std::advance(lim, indexes.size() * (percent / 100.0));
-    for(vector<int>::iterator index = indexes.begin(); index != lim; ++index) {
-        bipolar_inverse(r[*index]);
-    }
-}
 
 
 void classify(matrix<int>& weights, Representation& image, Representation& classified, function<int(int)> f)
@@ -94,16 +76,16 @@ int main(int argc, char *argv[])
     teach(representations, weights);
 
     Representation r = representations[1];
-    inspect_representation(r, images[0].cols);
+    cout << r.to_string(images[0].cols);
 
-    apply_noise(r, 99);
-    inspect_representation(r, images[0].cols);
+    r.apply_noise(90);
+    cout << r.to_string(images[0].cols);
     puts("");
 
     Representation classified;
     classify(weights, r, classified, linearActivationFunction);
 
-    inspect_representation(classified, images[0].cols);
+    /* inspect_representation(classified, images[0].cols); */
 
 
 
@@ -117,41 +99,31 @@ int linearActivationFunction(int x)
     return x > 0 ? 1 : -1;
 }
 
-void print_images(Images& images)
-{
-    for(int i = 0; i < images.size(); ++i) {
-        for (int j = 0; j < images[i].rows; ++j) {
-            for (int k = 0; k < images[i].cols; ++k) {
-                std::cout << (images[i].at<uchar>(j,k) > 180 ? " " : "█");
-            }
-            puts("");
-        }
-        puts("");
-    }
-}
-
-void inspect_representation(Representation& r, int rowSize)
-{
-    for(int i = 0; i < r.size() / rowSize; ++i) {
-        for (int j = 0; j < rowSize; ++j) {
-            std::cout << ( r[i*rowSize + j] == -1 ? " " : "█");
-            /* std::cout <<  r[i*rowSize + j]; */
-        }
-        puts("");
-    }
-}
+/* void print_images(Images& images) */
+/* { */
+/*     for(int i = 0; i < images.size(); ++i) { */
+/*         for (int j = 0; j < images[i].rows; ++j) { */
+/*             for (int k = 0; k < images[i].cols; ++k) { */
+/*                 std::cout << (images[i].at<uchar>(j,k) > 180 ? " " : "█"); */
+/*             } */
+/*             puts(""); */
+/*         } */
+/*         puts(""); */
+/*     } */
+/* } */
 
 
-void inspect_matrix(matrix<int>& mt)
-{
-    for(int i = 0; i < mt.size(); ++i) {
-        for (int j = 0; j < mt[i].size(); ++j) {
-             /* printf("%3d\n", mt[i][j]); */
-             printf("%d\n", mt[i][j]);
-        }
-        /* puts(""); */
-    }
-}
+
+/* void inspect_matrix(matrix<int>& mt) */
+/* { */
+/*     for(int i = 0; i < mt.size(); ++i) { */
+/*         for (int j = 0; j < mt[i].size(); ++j) { */
+/*              /1* printf("%3d\n", mt[i][j]); *1/ */
+/*              printf("%d\n", mt[i][j]); */
+/*         } */
+/*         /1* puts(""); *1/ */
+/*     } */
+/* } */
 
 void teach(Representations& representations, matrix<int>& weights)
 {
