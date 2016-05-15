@@ -3,8 +3,10 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include <iostream>
 #include <vector>
-#include <dirent.h>
+#include <functional>
+
 #include <clocale>
+#include <dirent.h>
 
 /* #include <io.h> */
 /* #include <fcntl.h> */
@@ -18,7 +20,8 @@ using namespace cv;
 template <typename T> class matrix : public std::vector<std::vector<T> > {};
 typedef vector<int> Representation;
 typedef vector<Representation> Representations;
-typedef vector<Mat> Images;
+typedef Mat Image;
+typedef vector<Image> Images;
 
 
 void teach(Representations& , matrix<int>&);
@@ -26,6 +29,32 @@ void teach(Representations& , matrix<int>&);
 int weight(Representations& representations, int y, int x);
 void img2representation(Mat& img, Representation& representation, int threshold = 180);
 void inspect_matrix(matrix<int>& mt);
+void inspect_representation(Representation& r, int rowSize);
+int linearActivationFunction(int x);
+
+
+void classify(matrix<int>& weights, Representation& image, Representation& classified, function<int(int)> f)
+{
+    int retries = 1000;
+    Representation post = image, pre = image;
+
+    if(image.size() != classified.size())
+        classified.resize(image.size());
+
+    for(int retry = 0; retry < retries; ++retry) {
+        for(int i = 0; i < weights.size(); ++i) {
+            int sum = 0;
+            for(int j = 0; j < weights[0].size(); ++j) {
+                sum += weights[j][i] * pre[j];
+            }
+            post[i] = f(sum);
+        }
+        if(post == pre)
+            break;
+        pre = post;
+    }
+    classified = post;
+}
 
 int main(int argc, char *argv[])
 {
@@ -37,21 +66,75 @@ int main(int argc, char *argv[])
     };
 
     Representations representations(images.size());
-
-
+    Representations representations_after(images.size());
     for(int i = 0; i < images.size(); ++i)
         img2representation(images[i], representations[i]);
+
+    Representation o = {
+        1,1,1,1,1,1,1,1,1,1,
+        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
+        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
+        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
+        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
+        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
+        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
+        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
+        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
+        1,1,1,1,1,1,1,1,1,1};
+
+
+    Representation e = {
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,1,1,1,1,1,1,1,1,-1,
+        -1,1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,1,1,1,1,1,1,1,1,-1,
+        -1,1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,1,1,1,1,1,1,1,1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
+
+    Representation w = {
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+        1,-1,-1,-1,1,-1,-1,-1,1,-1,
+        1,-1,-1,-1,1,-1,-1,-1,1,-1,
+        1,-1,-1,-1,1,-1,-1,-1,1,-1,
+        1,-1,-1,-1,1,-1,-1,-1,1,-1,
+        1,-1,-1,-1,1,-1,-1,-1,1,-1,
+        1,-1,-1,-1,1,-1,-1,-1,1,-1,
+        1,-1,-1,-1,1,-1,-1,-1,1,-1,
+        1,1,1,1,1,1,1,1,1,-1,
+        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
+    /* Representations representations = {o,e,w}; */
 
 
     matrix<int> weights;
     teach(representations, weights);
 
-    matrix<int> weights2(weights);
-    teach(representations, weights2);
+    Representation r = representations[0];
+    /* inspect_matrix(weights); */
 
-    inspect_matrix(weights);
+    r[0] = -1;
+    inspect_representation(r, images[0].cols);
+    /* inspect_representation(r, 10); */
     puts("");
-    inspect_matrix(weights2);
+
+    Representation classified;
+    classify(weights, r, classified, linearActivationFunction);
+
+    inspect_representation(classified, images[0].cols);
+    /* inspect_representation(classified, 10); */
+
+
+    /* while(false) { */
+    /*     for(int i = 0; i < representations.size(); ++i) { */
+    /*         int sum = 0; */
+    /*         for(int j = 0; j < representations.size(); ++j) { */
+    /*             sum += weights[i][j] * representations[j] */
+    /*         } */
+    /*     } */
+    /* } */
 
     /* img2representation(); */
     /* img = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE); */
@@ -61,6 +144,11 @@ int main(int argc, char *argv[])
 
     waitKey(0);
     return 0;
+}
+
+int linearActivationFunction(int x)
+{
+    return x > 0 ? 1 : -1;
 }
 
 void print_images(Images& images)
@@ -76,21 +164,32 @@ void print_images(Images& images)
     }
 }
 
-
-void inspect_matrix(matrix<int>& mt)
+void inspect_representation(Representation& r, int rowSize)
 {
-    for(int i = 0; i < mt.size(); ++i) {
-        for (int j = 0; j < mt[i].size(); ++j) {
-             printf("%3d", mt[i][j]);
+    for(int i = 0; i < r.size() / rowSize; ++i) {
+        for (int j = 0; j < rowSize; ++j) {
+            std::cout << ( r[i*rowSize + j] == -1 ? " " : "█");
+            /* std::cout <<  r[i*rowSize + j]; */
         }
         puts("");
     }
 }
 
+
+void inspect_matrix(matrix<int>& mt)
+{
+    for(int i = 0; i < mt.size(); ++i) {
+        for (int j = 0; j < mt[i].size(); ++j) {
+             /* printf("%3d\n", mt[i][j]); */
+             printf("%d\n", mt[i][j]);
+        }
+        /* puts(""); */
+    }
+}
+
 void teach(Representations& representations, matrix<int>& weights)
 {
-    int neurons_count = 10;
-
+    int neurons_count = representations[0].size();
     weights.resize(neurons_count);
     for(int y = 0; y < neurons_count; ++y) {
         weights[y].resize(neurons_count);
@@ -107,8 +206,8 @@ int weight(Representations& representations, int y, int x)
         return 0;
     } else {
         int sum = 0;
-        for (Representations::iterator r = representations.begin();  r != representations.end(); ++r) {
-            sum += (*r)[x] + (*r)[y];
+        for(int i = 0; i < representations.size(); ++i) {
+            sum += representations[i][x] * representations[i][y];
         }
         return sum;
     }
