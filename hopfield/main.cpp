@@ -8,6 +8,7 @@
 #include <clocale>
 #include <dirent.h>
 
+
 /* #include <io.h> */
 /* #include <fcntl.h> */
 
@@ -31,6 +32,25 @@ void img2representation(Mat& img, Representation& representation, int threshold 
 void inspect_matrix(matrix<int>& mt);
 void inspect_representation(Representation& r, int rowSize);
 int linearActivationFunction(int x);
+
+void bipolar_inverse(int& val)
+{
+    val = (val == 1 ? -1 : 1);
+}
+
+void apply_noise(Representation& r, float percent)
+{
+    vector<int> indexes(r.size());
+    for(int i = 0; i < r.size(); ++i)
+        indexes[i] = i;
+    random_shuffle(indexes.begin(), indexes.end());
+
+    vector<int>::iterator lim = indexes.begin();
+    std::advance(lim, indexes.size() * (percent / 100.0));
+    for(vector<int>::iterator index = indexes.begin(); index != lim; ++index) {
+        bipolar_inverse(r[*index]);
+    }
+}
 
 
 void classify(matrix<int>& weights, Representation& image, Representation& classified, function<int(int)> f)
@@ -70,77 +90,23 @@ int main(int argc, char *argv[])
     for(int i = 0; i < images.size(); ++i)
         img2representation(images[i], representations[i]);
 
-    Representation o = {
-        1,1,1,1,1,1,1,1,1,1,
-        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
-        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
-        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
-        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
-        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
-        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
-        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
-        1,-1,-1,-1,-1,-1,-1,-1,-1,1,
-        1,1,1,1,1,1,1,1,1,1};
-
-
-    Representation e = {
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,1,1,1,1,1,1,1,1,-1,
-        -1,1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,1,1,1,1,1,1,1,1,-1,
-        -1,1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,1,1,1,1,1,1,1,1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
-
-    Representation w = {
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-        1,-1,-1,-1,1,-1,-1,-1,1,-1,
-        1,-1,-1,-1,1,-1,-1,-1,1,-1,
-        1,-1,-1,-1,1,-1,-1,-1,1,-1,
-        1,-1,-1,-1,1,-1,-1,-1,1,-1,
-        1,-1,-1,-1,1,-1,-1,-1,1,-1,
-        1,-1,-1,-1,1,-1,-1,-1,1,-1,
-        1,-1,-1,-1,1,-1,-1,-1,1,-1,
-        1,1,1,1,1,1,1,1,1,-1,
-        -1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
-    /* Representations representations = {o,e,w}; */
-
-
     matrix<int> weights;
     teach(representations, weights);
 
-    Representation r = representations[0];
-    /* inspect_matrix(weights); */
-
-    r[0] = -1;
+    Representation r = representations[1];
     inspect_representation(r, images[0].cols);
-    /* inspect_representation(r, 10); */
+
+    apply_noise(r, 99);
+    inspect_representation(r, images[0].cols);
     puts("");
 
     Representation classified;
     classify(weights, r, classified, linearActivationFunction);
 
     inspect_representation(classified, images[0].cols);
-    /* inspect_representation(classified, 10); */
 
 
-    /* while(false) { */
-    /*     for(int i = 0; i < representations.size(); ++i) { */
-    /*         int sum = 0; */
-    /*         for(int j = 0; j < representations.size(); ++j) { */
-    /*             sum += weights[i][j] * representations[j] */
-    /*         } */
-    /*     } */
-    /* } */
 
-    /* img2representation(); */
-    /* img = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE); */
-
-    /* namedWindow(WIN_NAME, CV_WINDOW_AUTOSIZE); */
-    /* imshow(WIN_NAME, img); */
 
     waitKey(0);
     return 0;
