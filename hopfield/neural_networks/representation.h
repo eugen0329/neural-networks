@@ -5,6 +5,8 @@
 #include <string>
 
 
+namespace Neural {
+
 template<class T=int>
 class GenericRepresentation {
 private:
@@ -46,6 +48,7 @@ public:
     {
         return impl.size();
     }
+
     std::string to_string(int rowSize)
     {
         std::string str = "";
@@ -74,5 +77,8 @@ public:
 };
 
 typedef GenericRepresentation<> Representation;
+typedef std::vector<Representation> Representations;
+
+}
 
 #endif /* end of include guard: REPRESENTATIN_H_XRF6HDOZ */
