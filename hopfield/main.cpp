@@ -21,12 +21,7 @@ using namespace Neural;
 
 typedef Mat Image;
 typedef vector<Image> Images;
-
-const char imageNames[][2] = {
-    "a",
-    "i",
-    "p",
-};
+const char imageNames[][3] = { "a", "и", "p" };
 
 int main(int argc, char *argv[])
 {
@@ -37,13 +32,13 @@ int main(int argc, char *argv[])
         imread("examples/p.jpg", CV_LOAD_IMAGE_GRAYSCALE)
     };
 
-    std::vector<int> noiseLevels = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
+    std::vector<int> noiseLevels = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
 
     Neural::Representations representations(images.size());
     for(int i = 0; i < images.size(); ++i)
         img2representation(images[i], representations[i]);
 
-    Neural::Hopfield network(representations[0].size());
+    Neural::Hopfield network;
     network.teach(representations);
 
 

@@ -25,12 +25,6 @@ private:
 
 public:
     Hopfield() {}
-    Hopfield(int size) : weights(size)
-    {
-        for(int i = 0; i < size; ++i) {
-            weights.resize(size);
-        }
-    }
 
     void teach(Representations &representations)
     {
