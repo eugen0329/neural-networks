@@ -22,10 +22,11 @@ using namespace Neural;
 typedef Mat Image;
 typedef vector<Image> Images;
 
-
-void img2representation(Mat& img, Neural::Representation& representation, int threshold = 180);
-int linearActivationFunction(int x);
-
+const char imageNames[][2] = {
+    "a",
+    "i",
+    "p",
+};
 
 int main(int argc, char *argv[])
 {
@@ -46,20 +47,23 @@ int main(int argc, char *argv[])
     network.teach(representations);
 
 
-    Neural::Representations::iterator
-        first = representations.begin(),
-        last = representations.end();
-
     Neural::Representation image, classified;
-    for(Neural::Representations::iterator r = first; r != last; ++r) {
-        for(std::vector<int>::iterator l = noiseLevels.begin(); l != noiseLevels.end(); ++l) {
-            image = *r;
-            image.apply_noise(*l);
+    for(int r = 0; r < representations.size(); ++r) {
+        for(int l = 0; l != noiseLevels.size(); ++l) {
+            image = representations[r];
+            image.apply_noise(noiseLevels[l]);
             network.classify(image, classified, linearActivationFunction);
 
-            cout << "Noise level: " << *l << endl;
-            cout << image.to_string(images[0].cols);
-            cout << classified.to_string(images[0].cols);
+            cout << "Image: \"\033[32m"
+                << imageNames[r] << "\033[39m\". Noise level: \033[31m"
+                << noiseLevels[l] << "\033[39m" << endl;
+
+            cout << "\033[37m\033[47m\033[1m"
+                << image.to_string(images[0].cols)
+                << "\033[0m" << endl;
+            cout << "\033[37m\033[47m\x1B[1m"
+                << classified.to_string(images[0].cols)
+                << "\033[0m" << endl;
         }
     }
 
@@ -67,16 +71,3 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-
-void img2representation(Mat& img, Neural::Representation& representation, int threshold)
-{
-    representation.resize(img.rows * img.cols);
-    int i = 0;
-    for(int y = 0; y < img.rows; ++y) {
-        /* representation[y].resize(img.cols); */
-        for(int x = 0; x < img.cols; ++x) {
-            representation[i] = img.at<uchar>(y, x) < 180 ? -1 : 1;
-            i++;
-        }
-    }
-}
