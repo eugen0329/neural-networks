@@ -9,10 +9,10 @@
 
 #include <cmath>
 
-#include "../hopfield/neural_networks.h"
+#include "neural_networks/representation.h"
+#include "neural_networks/perceptron.h"
 
-#include "activation_functs.h"
-#include "../hopfield/util.h"
+#include "neural_networks/activation_functs.h"
 #include "util.h"
 
 
@@ -20,26 +20,11 @@ using namespace std;
 using namespace cv;
 using namespace Neural;
 
-typedef vector<vector<int>> Image;
-typedef vector<Image> Images;
-typedef vector<float> Weights;
-typedef vector<Weights> Layer;
-typedef vector<Layer> Perceptron;
-
-void build(Perceptron& p, vector<int> layersSizes)
-{
-    int nLayers = layersSizes.size();
-    p.resize(nLayers);
-    for(int layer = 0; layer < nLayers; ++layer) {
-        p[layer].resize(layersSizes[layer]);
-    }
-}
 
 int main(int argc, char *argv[])
 {
     Weights weights;
     Representation r;
-    Neural::Representations representations(images.size());
     Images images = {
         imread("examples/2.1.png", CV_LOAD_IMAGE_GRAYSCALE),
         imread("examples/2.2.png", CV_LOAD_IMAGE_GRAYSCALE),
@@ -57,15 +42,13 @@ int main(int argc, char *argv[])
     for(int i = 0; i < images.size(); ++i)
         img2representation(images[i], representations[i]);
 
-    Perceptron p;
     int inSize = representations[0].size(); // input vector sizes
-    #define CLASSES_COUNT 3
+    #define CLASSES_COUNT 5
     int outSize = CLASSES_COUNT;
     int hiddenSize = hiddenLayerSize(inSize, outSize, images.size());
-    build(p, {inSize, hiddenSize, outSize});
-
-
-
+    Perceptron perceptron(inSize, outSize, {hiddenSize});
+    float err = perceptron.train(representations[0], {1, 0, 0, 0, 0});
+    printf("%f\n", err);
 
     return 0;
 }
