@@ -1,15 +1,16 @@
 #ifndef PERCEPTRON_H_ACXUHTU1
 #define PERCEPTRON_H_ACXUHTU1
 
-
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <string>
 
 #include "representation.h"
+#include "../util.h"
 #include "neuron.h"
 
 using namespace std;
@@ -22,7 +23,6 @@ typedef Mat Image;
 typedef vector<Image> Images;
 typedef vector<float> Weights;
 /* typedef vector<Layer> Perceptron; */
-
 class Perceptron {
     typedef vector<Neuron> Layer;
     typedef vector<Layer> Layers;
@@ -41,38 +41,49 @@ public:
 
     Perceptron(int inSize, int outSize, vector<int>&& hidden = {})
     {
-        if(!hidden.empty()) {
-            int nInputs = inSize;
-            layers.resize(hidden.size() + OUTPUT_LAYER);
-            for(int i = 0; i < hidden.size(); ++i) {
-                layers[i].resize(hidden[i]);
-                for(int neuron = 0; neuron < hidden[i]; ++neuron) {
-                    layers[i][neuron].build(nInputs, hidden[i]);
-                }
-               nInputs = layers[i].size();
+        int nLayerInputs = inSize;
+        layers.resize(hidden.size() + OUTPUT_LAYER);
+
+        for(int i = 0; i < hidden.size(); ++i) {
+            layers[i].resize(hidden[i]);
+            for(int neuron = 0; neuron < hidden[i]; ++neuron) {
+                layers[i][neuron].build(nLayerInputs, hidden[i]);
             }
-        } else {
-            layers.resize(1);
+           nLayerInputs = layers[i].size();
         }
 
-        Layer& outLayer = layers[layers.size() - 1];
-        int nInputs = layers.empty() ? inSize : (layers[layers.size() - 2]).size();
-        outLayer.resize(outSize);
+        nLayerInputs = layers.empty() ? inSize : (layers[layers.size() - 2]).size();
+        layers.back().resize(outSize);
         for(int neuron = 0; neuron < outSize; ++neuron) {
-            outLayer[neuron].build(nInputs, outSize);
+            layers.back()[neuron].build(nLayerInputs, outSize);
         }
     }
-    float train(Representation& input, NeuroIO&& expected)
+
+    NeuroIO classify(Representation& input)
     {
         directPass(input);
+        Layer& outLayer = layers[layers.size()-1];
+        NeuroIO klass(outLayer.size());
+        for(int i = 0; i < klass.size(); ++i) {
+            klass[i] = outLayer[i].getOut();
+        }
+
+        return klass;
+    }
+
+    /* printf("%f %f %f\n", inp[0], inp[1], inp[2]); */
+    /* printf("%f %f %f\n", layers[0][0].getOut(), layers[0][1].getOut(), layers[0][2].getOut()); */
+    float train(Representation& inp, NeuroIO expected)
+    {
+        directPass(inp);
         calcDeltas(expected);
-        updateWeights(input);
+        updateWeights(inp);
         return errRate(expected);
     }
 
     float errRate(NeuroIO& expected)
     {
-        Layer& l = layers[layers.size()];
+        Layer& l = layers[layers.size()-1];
         float sum = 0.;
         for(int neuron = 0; neuron < l.size(); ++neuron) {
             sum += pow(expected[neuron] - l[neuron].getOut(), 2);
@@ -81,22 +92,15 @@ public:
     }
 
 private:
-    void updateWeights(Representation& input)
-    {
-        for(int l = 0; l < layers.size(); ++l) {
-            for(int neuron = 0; neuron < layers[l].size(); ++neuron) {
-                layers[l][neuron].updateWeight(input);
-            }
-        }
-    }
 
     void directPass(Representation& r)
     {
         NeuroIO layerOutput;
         NeuroIO layerInput(r.size());
 
-        for(int i = 0; i < r.size(); ++i)
+        for(int i = 0; i < r.size(); ++i) {
             layerInput[i] = r[i];
+        }
 
         for(int l = 0; l < layers.size(); ++l) {
             layerOutput.resize(layers[l].size());
@@ -107,10 +111,22 @@ private:
         }
     }
 
+    void updateWeights(Representation& input)
+    {
+        Representation layerInput = input;
+        for(int l = layers.size() - 1; l > 0; --l) {
+            for(int neuron = 0; neuron < layers[l].size() ; ++neuron) {
+                layers[l][neuron].updateWeight();
+            }
+        }
+    }
+
     void calcDeltas(NeuroIO& expected)
     {
-        calcOutDelta(*layers.end(), expected);
-        calcHiddenDelta(*(layers.end() - 1), *layers.end());
+        calcOutDelta(layers.back(), expected);
+        if (layers.size() > 1) {
+            calcHiddenDelta((layers[layers.size()-2]), layers.back());
+        }
     }
 
     //     δh = ∑ δ_out⋅f'⋅whi
@@ -126,62 +142,52 @@ private:
         }
     }
 
-    /* layer.each_with_index do |neuron, neuron_index| */
-    /*   error = 0 */
-    /*   @network.last.each do |output_neuron| */
-    /*     error += output_neuron.delta * output_neuron.weights[neuron_index] */
-    /*   end */
-    /*   output = neuron.last_output */
-    /*   neuron.delta = output * (1 - output) * error */
-    /* end */
-        //     δ_out = z - y
+    //     δ_out = z - y
     void calcOutDelta(Layer& layer, NeuroIO& expected)
     {
         for(int neuron = 0; neuron < layer.size(); ++neuron) {
             float out = layer[neuron].getOut();
+            layer[neuron].setDelta(out * (1 - out) * (expected[neuron] - out));
             layer[neuron].setDelta(expected[neuron] - out);
         }
     }
-    /* static void shiftForward(Perceptron& p, Representation& r, NeuroIO& outputs) */
-    /* { */
-    /*     NeuroIO layerOutput; */
+public:
+    enum class WHAT : unsigned char { DELTAS, OUTPUTS };
+    std::string inspectLayers(WHAT what = WHAT::OUTPUTS)
+    {
+        using namespace std;
+        string dumpStr;
+        for(int i = 0; i < layers.size(); ++i) {
+            dumpStr += string("Layer ") + to_string(i) + ": ";
+            dumpStr += inspectLayer(i, what) + "\n";
+        }
+        return dumpStr;
+    }
 
-    /*     NeuroIO layerInput(r.size()); */
-    /*     for(int i = 0; i < r.size(); ++i) */
-    /*         layerInput[i] = r[i]; */
-
-
-    /*     for(int l = 0; l < p.size(); ++l) { */
-    /*         layerOutput.resize(p[l].size()); */
-    /*         for(int n = 0; n < p[l].size(); ++n) { */
-    /*             layerOutput[n] = out(); */
-    /*         } */
-    /*     } */
-    /* } */
+    std::string inspectOut(WHAT what = WHAT::OUTPUTS) { return  inspectLayer(layers.size()-1, what); }
+    std::string inspectLayer(int number, WHAT what = WHAT::OUTPUTS)
+    {
+        using namespace std;
+        string dumpStr;
+        for(int j = 0; j < layers[number].size(); ++j) {
+            if(what == WHAT::OUTPUTS) {
+                dumpStr += to_string(layers[number][j].getOut()) + " ";
+            } else {
+                dumpStr += to_string(layers[number][j].getDelta()) + " ";
+            }
+        }
+        return dumpStr;
+    }
+    NeuroIO out()
+    {
+        Layer& last = layers.back();
+        NeuroIO output(last.size());
+        for(int i = 0; i < last.size(); ++i) {
+            output[i] = last[i].getOut();
+        }
+        return output;
+    }
 };
-
-/* void build(Perceptron& p, vector<int> sizes) */
-/* { */
-/*     /1* int nLayers = sizes.size(); *1/ */
-/*     /1* p.resize(nLayers); *1/ */
-/*     /1* for(int layer = 0; layer < nLayers; ++layer) { *1/ */
-/*     /1*     p[layer].resize(sizes[layer]); *1/ */
-/*     /1* } *1/ */
-/* } */
-
-/* float train(Perceptron& p, Representation& img, int outSize) */
-/* { */
-/*     /1* NeuroIO outs(outSize); *1/ */
-/*     /1* shiftForward(p, outs); *1/ */
-/*     return 0.; */
-/* } */
-
-
-/* /1* float out() *1/ */
-
-/* void calcDeltas(Perceptron& p) */
-/* { */
-/* } */
 
 
 #endif /* end of include guard: PERCEPTRON_H_ACXUHTU1 */

@@ -17,57 +17,74 @@ using namespace cv;
 using namespace Neural;
 
 #ifndef LEARNING_FACTOR
-#define LEARNING_FACTOR 0.5
+#define LEARNING_FACTOR 0.35
+#define THRESHOLD 0.5
 #endif
 
 typedef vector<float> NeuroIO;
 
 class Neuron {
-    float out;
+    float outp;
+    NeuroIO inp;
     float delta;
-    typedef function<float(float)> ActivationFunc;
 
-    ActivationFunc activFunc;
-    vector<float> inWeights;
+    vector<float> weights;
 
 public:
     Neuron() {}
 
-    void build(int inputsCount, int neuronsInLayer, ActivationFunc activFunc = ActivationFuncs::sigmoid)
+    void build(int inputsCount, int neuronsInLayer)
     {
-        this->activFunc = activFunc;
-        inWeights.resize(inputsCount);
-
-        for(int i = 0; i < inWeights.size(); ++i)
-            inWeights[i] = randInRange(-1/(2*neuronsInLayer), 1/(2*neuronsInLayer));
-    }
-
-    void updateWeight(Representation& input)
-    {
-        for(int i = 0; i < inWeights.size(); ++i) {
-            inWeights[i] = LEARNING_FACTOR * delta * out * (1 - out) * input[i];
+        weights.resize(inputsCount + 1);
+        for(int i = 0; i < weights.size(); ++i) {
+            weights[i] = randInRange(-1.0/(2.0*neuronsInLayer), 1.0/(2.0*neuronsInLayer));
         }
     }
 
-    float induce(NeuroIO& inputs)
+    void updateWeight()
     {
-        float sum = 0;
-        for(int i = 0; i < inputs.size(); ++i) {
-            sum += inputs[i] * inWeights[i];
+        Representation inputs = inp;
+        inputs.push_back(-1);
+        for(int i = 0; i < weights.size(); ++i) {
+            weights[i] += LEARNING_FACTOR *  delta * inputs[i];
         }
-        out = activFunc(sum);
+    }
 
-        return out;
+    float sigmoid(float x)
+    {
+        return 1.0 / (1 + exp(-x));
+    }
+
+    float induce(NeuroIO& neuronInp)
+    {
+        inp = neuronInp;
+        inp.push_back(-1);
+        float sum = 0.0;
+        for(int i = 0; i < inp.size(); ++i) {
+            sum += inp[i] * weights[i];
+        }
+        outp = sigmoid(sum);
+        return outp;
+    }
+
+    vector<float>& getWeights()
+    {
+        return weights;
     }
 
     float atWeight(int i)
     {
-        return inWeights[i];
+        return weights[i];
     }
 
     float getOut()
     {
-        return out;
+        return outp;
+    }
+
+    float getIn()
+    {
+        return outp;
     }
 
     float setDelta(float newDelta)

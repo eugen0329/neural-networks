@@ -7,13 +7,13 @@
 namespace Neural {
 
 
-template<class T=int>
+template<class T=float>
 class GenericRepresentation {
 private:
     typedef typename std::vector<T> impl_t;
     impl_t impl;
 
-    virtual void bipolar_inverse(int& val)
+    virtual void bipolar_inverse(T& val)
     {
         val = (val == 1 ? 0 : 1);
     }
@@ -21,6 +21,12 @@ public:
     GenericRepresentation() {}
     GenericRepresentation(int size) : impl(size) {}
     GenericRepresentation(const GenericRepresentation& other) : impl(other.impl) {}
+    GenericRepresentation(const std::vector<T>& other) : impl(other) {}
+
+    void push_back(T val)
+    {
+        impl.push_back(val);
+    }
 
     void resize(int n, int val = 0)
     {
@@ -61,7 +67,7 @@ public:
         return str;
     }
 
-    void apply_noise(float percent)
+    GenericRepresentation<T>& apply_noise(float percent)
     {
         impl_t indexes(impl.size());
         for(int i = 0; i < impl.size(); ++i)
@@ -73,6 +79,11 @@ public:
         for(typename impl_t::iterator index = indexes.begin(); index != lim; ++index) {
             bipolar_inverse(impl[*index]);
         }
+        return *this;
+    }
+    impl_t& getImpl()
+    {
+        return impl;
     }
 };
 
