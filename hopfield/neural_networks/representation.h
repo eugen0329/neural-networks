@@ -13,7 +13,7 @@ private:
     typedef typename std::vector<T> impl_t;
     impl_t impl;
 
-    void bipolar_inverse(int& val)
+    virtual void bipolar_inverse(int& val)
     {
         val = (val == 1 ? -1 : 1);
     }

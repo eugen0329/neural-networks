@@ -4,8 +4,16 @@
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include <vector>
 
 #define TO_F(val)  ((float) val)
+
+#define M_BLACK_FG 30
+#define M_BLACK_BG 40
+#define M_BLUE_FG 34
+#define M_BLUE_BG 44
+#define M_BOLD  1
+#define M_RESET 0
 
 int linearActivationFunction(int x)
 {
@@ -23,6 +31,15 @@ void img2representation(cv::Mat& img, Neural::Representation& representation, in
             i++;
         }
     }
+}
+
+std::ostream& anci_escape(std::ostream& os, std::vector<unsigned char>&& modes)
+{
+    for(int i = 0; i < modes.size(); ++i) {
+        os << "\033[" << modes[i] << 'm';
+
+    }
+    return os;
 }
 
 
