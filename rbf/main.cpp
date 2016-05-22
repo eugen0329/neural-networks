@@ -16,7 +16,6 @@
 #include "neural_networks/representation.h"
 #include "neural_networks/rbf.h"
 
-#include "neural_networks/activation_functs.h"
 #include "neural_networks/example.h"
 #include "csv_iterator.h"
 #include "util.h"
@@ -24,8 +23,6 @@
 using namespace std;
 using namespace cv;
 using namespace Neural;
-
-typedef vector<Example> Examples;
 
 #define AAA 3000
 
@@ -37,6 +34,42 @@ int main(int argc, char *argv[])
     /* images(); */
     iris();
     return 0;
+}
+
+
+void iris()
+{
+    map<string, int> tagsMap = {{"Iris-setosa", 0}, {"Iris-versicolor", 1}, {"Iris-virginica", 2}};
+    vector<int> tags;
+    values(tagsMap, tags);
+
+    std::ifstream       file("iris.csv");
+    Examples examples;
+    for(CSVIterator r(file);r != CSVIterator();++r) {
+        std::vector<float> features = {stof((*r)[0]), stof((*r)[1]), stof((*r)[2]), stof((*r)[3])};
+        examples.push_back(Example(features, (*r)[4], tagsMap[(*r)[4]], tagsMap.size()));
+    }
+
+    /* random_shuffle(examples.begin(), examples.end()); */
+
+    RBF rbf(4, 3);
+    int errs = 0;
+    do {
+        errs = 0;
+        for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) {
+            float err = rbf.train((*it).in(), (*it).out());
+            if(max_index((*it).out()) != max_index(rbf.out())) errs++;
+        }
+        cout << errs / 100.0 << "\r";
+    } while((errs / 100.0) > 0.05);
+    errs = 0;
+    for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) {
+        /* NeuroIO result = rbf.classify((*it).in()); */
+        /* cout << max_index((*it).out()) << max_index(result) << endl; */
+        /* if(max_index((*it).out()) != max_index(rbf.out())) errs++; */
+    }
+    cout << errs / 100.0;
+    cout << endl;
 }
 
 void images()
@@ -75,36 +108,4 @@ void images()
     /* } */
     /* cout << errs / 100.0; */
     /* cout << endl; */
-}
-
-void iris()
-{
-    map<string, int> tagsMap = {{"Iris-setosa", 0}, {"Iris-versicolor", 1}, {"Iris-virginica", 2}};
-    std::ifstream       file("iris.csv");
-    Examples examples;
-    for(CSVIterator r(file);r != CSVIterator();++r) {
-        std::vector<float> features = {stof((*r)[0]), stof((*r)[1]), stof((*r)[2]), stof((*r)[3])};
-        examples.push_back(Example(features, (*r)[4], tagsMap[(*r)[4]], tagsMap.size()));
-    }
-
-    /* random_shuffle(examples.begin(), examples.end()); */
-
-    RBF rbf(4, 3, {4});
-    int errs = 0;
-    do {
-        errs = 0;
-        for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) {
-            float err = rbf.train((*it).in(), (*it).out());
-            if(max_index((*it).out()) != max_index(rbf.out())) errs++;
-        }
-        cout << errs / 100.0 << "\r";
-    } while((errs / 100.0) > 0.05);
-    errs = 0;
-    for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) {
-        /* NeuroIO result = rbf.classify((*it).in()); */
-        /* cout << max_index((*it).out()) << max_index(result) << endl; */
-        /* if(max_index((*it).out()) != max_index(rbf.out())) errs++; */
-    }
-    cout << errs / 100.0;
-    cout << endl;
 }

@@ -50,7 +50,7 @@ int max_index(T it)
 
 
 template<class T>
-void combinations(vector<T> vec, int len, std::function<void(const std::list<T>&)> callback)
+void combinations(vector<T> vec, int len, std::function<void(std::list<T>&)> callback)
 {
     int n = vec.size(), r = len;
 

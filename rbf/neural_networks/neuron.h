@@ -9,7 +9,6 @@
 #include <functional>
 
 #include "representation.h"
-#include "activation_functs.h"
 #include "../util.h"
 
 using namespace std;
