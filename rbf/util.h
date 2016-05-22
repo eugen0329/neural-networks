@@ -3,6 +3,11 @@
 
 #define TO_F(val)  ((float) val)
 #include <typeinfo>
+#include <functional>
+#include <list>
+#include <vector>
+
+using namespace std;
 
 int hiddenLayerSize(int inSize, int outSize, int examplesCount)
 {
@@ -20,6 +25,14 @@ float randInRange(float from, float to)
     return from + static_cast <float> (rand() * 1.0) /( static_cast <float> (RAND_MAX/(to-from)));
 }
 
+void values(map<string, int>& from, vector<int>& to)
+{
+    to.resize(from.size());
+    for(map<string, int>::iterator p = from.begin(); p != from.end(); ++p) {
+        p->second;
+    }
+}
+
 template<class T=float>
 std::string inspectVec(std::vector<T> v)
 {
@@ -33,6 +46,28 @@ template<class T>
 int max_index(T it)
 {
     return std::distance(it.begin(), std::max_element(it.begin(), it.end()));
+}
+
+
+template<class T>
+void combinations(vector<T> vec, int len, std::function<void(const std::list<T>&)> callback)
+{
+    int n = vec.size(), r = len;
+
+    std::vector<bool> selector(n);
+    std::fill(selector.begin() + n - r, selector.end(), true);
+    std::list<T> selected;
+
+    do {
+        for (int i = 0; i < n; ++i) {
+            if (selector[i]) {
+                selected.push_back(vec[i]);
+            }
+        }
+        callback(selected);
+        selected.clear();
+    } while (std::next_permutation(selector.begin(), selector.end()));
+
 }
 
 #endif /* end of include guard: UTIL_H_APDHYTVM */
