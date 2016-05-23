@@ -37,7 +37,6 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-
 void iris()
 {
     map<string, int> tagsMap = {{"Iris-setosa", 0}, {"Iris-versicolor", 1}, {"Iris-virginica", 2}};
