@@ -27,12 +27,13 @@ class Cell {
     NeuroIO inp;
     float delta;
 
+    float gaussFunc(float x) { return exp( -x / squareDeviation ); }
 public:
     Cell() {}
 
     Representation expectations;
-    float deviation;
-    float squareDeviation;
+    float deviation = 10;
+    float squareDeviation = 10;
 
     float induce(NeuroIO& neuronInp)
     {
@@ -41,11 +42,8 @@ public:
         for(int i = 0; i < inp.size(); ++i) {
             sum += pow(inp[i] - expectations[i], 2);
         }
-        /* outp = sum; */
-        /* outp = 199; */
-        /* cout << sum; */
-        outp = exp( -sum / squareDeviation );
-        return outp;
+
+        return (outp = gaussFunc(sum));
     }
 };
 

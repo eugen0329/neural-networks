@@ -57,7 +57,7 @@ public:
     float induce(NeuroIO& neuronInp)
     {
         inp = neuronInp;
-        inp.push_back(-1);
+        /* inp.push_back(-1); */
         float sum = 0.0;
         for(int i = 0; i < inp.size(); ++i) {
             sum += inp[i] * weights[i];

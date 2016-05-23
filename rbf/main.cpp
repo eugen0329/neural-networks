@@ -31,6 +31,7 @@ void images();
 
 int main(int argc, char *argv[])
 {
+    setlocale(LC_ALL, "");
     /* images(); */
     iris();
     return 0;
@@ -50,7 +51,7 @@ void iris()
         examples.push_back(Example(features, (*r)[4], tagsMap[(*r)[4]], tagsMap.size()));
     }
 
-    RBF rbf(4, 3);
+    RBF rbf(4, 3, examples.size());
     rbf.configureRBF(examples, tags);
     random_shuffle(examples.begin(), examples.end());
     int errs = 0;
@@ -59,51 +60,26 @@ void iris()
         errs = 0;
         for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
             rbf.train(e->in(), e->out());
-            cout << rbf.inspectOut(RBF::WHAT::DELTAS) << endl;
             if(max_index(e->out()) != max_index(rbf.out())) {
                 errs++;
-                /* cout << max_index(e->out()) << " <=> " << max_index(rbf.out()) << endl; */
-                /* for(int i = 0; i < rbf.out().size(); ++i) { */
-                /*     cout << rbf.out()[i] << ' '; */
-                /* } */
-                /* cout << endl; */
-                /* for(int i = 0; i < rbf.out().size(); ++i) { */
-                /*     cout << e->out()[i] << ' '; */
-                /* } */
-                /* cout << endl; */
             }
         }
-        cout << errs * 100.0 / examples.size() << "\r";
-        /* cout <<  "rounds: " << rounds++ << endl; */
-    } while((errs / 100.0) > 0.05);
+        cout << errs * 100.0 / examples.size() << "%\r";
+    } while(((float) errs / examples.size()) > 0.05);
     errs = 0;
 
+    cout << "Expected | Got" << endl;
     for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
         NeuroIO result = rbf.classify(e->in());
-        /* cout << max_index(e->out()) << " <=> " << max_index(result) << endl; */
 
-
-        /* for(int i = 0; i < rbf.out().size(); ++i) { */
-        /*     cout << rbf.out()[i] << ' '; */
-        /* } */
-        /* cout << endl; */
-        /* for(int i = 0; i < rbf.out().size(); ++i) { */
-        /*     cout << e->out()[i] << ' '; */
-        /* } */
         if(max_index(e->out()) != max_index(rbf.out())) {
             errs++;
-            /* cout << rbf.inspectOut(RBF::WHAT::DELTAS) << endl; */
-            /* for(int i = 0; i < rbf.out().size(); ++i) { */
-            /*     cout << rbf.out()[i] << ' '; */
-            /* } */
-            /* cout << endl; */
-            /* for(int i = 0; i < rbf.out().size(); ++i) { */
-            /*     cout << e->out()[i] << ' '; */
-            /* } */
-            /* cout << endl; */
+            cout << "\033[31m✘\033[0m " << max_index(e->out()) << " != " << max_index(result) << endl;
+        } else {
+            cout << "  " << max_index(e->out()) << " == " << max_index(result) << endl;
         }
     }
-    cout << errs / 100.0;
+    cout << "Err rate: " << errs * 100. / examples.size() << "%";
     cout << endl;
 }
 
