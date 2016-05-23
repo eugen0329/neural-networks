@@ -16,7 +16,7 @@ using namespace cv;
 using namespace Neural;
 
 #ifndef LEARNING_FACTOR
-#define LEARNING_FACTOR 0.35
+#define LEARNING_FACTOR 0.15
 #define THRESHOLD 0.5
 #endif
 
@@ -43,7 +43,7 @@ public:
     void updateWeight()
     {
         Representation inputs = inp;
-        inputs.push_back(-1);
+        /* inputs.push_back(-1); */
         for(int i = 0; i < weights.size(); ++i) {
             weights[i] += LEARNING_FACTOR *  delta * inputs[i];
         }

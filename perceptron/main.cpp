@@ -61,8 +61,8 @@ void images()
             float err = perceptron.train((*it).in(), (*it).out());
             if(max_index((*it).out()) != max_index(perceptron.out())) errs++;
         }
-        cout << errs / 100.0 << "\r";
-    } while((errs / 100.0) > 0.05);
+        cout << errs * 100.0 / examples.size() << "\r";
+    } while((errs * 100.0 / examples.size()) > 0.01);
 
     vector<float> noiseLevels = {2, 3, 5};
     for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) {

@@ -51,17 +51,17 @@ class RBF
         }
     }
 
-    /* NeuroIO classify(Representation& input) */
-    /* { */
-    /*     /1* directPass(input); *1/ */
-    /*     /1* Layer& outLayer = outLayer[outLayer.size()-1]; *1/ */
-    /*     /1* NeuroIO klass(outLayer.size()); *1/ */
-    /*     /1* for(int i = 0; i < klass.size(); ++i) { *1/ */
-    /*     /1*     klass[i] = outLayer[i].getOut(); *1/ */
-    /*     /1* } *1/ */
+    NeuroIO classify(Representation& input)
+    {
+        directPass(input);
+        NeuroIO klass(outLayer.size());
+        for(int i = 0; i < klass.size(); ++i) {
+            klass[i] = outLayer[i].getOut();
+        }
 
-    /*     /1* return klass; *1/ */
-    /* } */
+        return klass;
+    }
+
     void configureRBF(Examples &examples, vector<int> &classes)
     {
         Examples clustImgs;
@@ -81,10 +81,12 @@ class RBF
             clustImgs.resize(distance(clustImgs.begin(), it));
             // END
 
+            rbfLayer[clustIter].expectations.resize(inputsSize);
             for(int inpIter = 0; inpIter < inputsSize; ++inpIter) {
                 for(int imgIter = 0; imgIter < clustImgs.size(); ++imgIter) {
                     rbfLayer[clustIter].expectations[inpIter] = clustImgs[imgIter][inpIter];
                 }
+                /* exit(1); */
                 rbfLayer[clustIter].expectations[inpIter] /= clustImgs.size();
             }
         }
@@ -107,8 +109,9 @@ class RBF
             centerDistances.push_back(sqrt(sum));
         });
         auto floatCmp = [](float a, float b) { return (a < b) ? -1 : (a > b); };
+
         float maxDistance = *max_element(begin(centerDistances), end(centerDistances), floatCmp);
-        float squareDeviation = pow(maxDistance, 2) / clustCount;
+        float squareDeviation = pow(maxDistance, 2) / (float) clustCount;
         float deviation = maxDistance / sqrt((float) clustCount);
         for(int i = 0; i < rbfLayer.size(); ++i) {
             rbfLayer[i].squareDeviation = squareDeviation;
@@ -210,96 +213,75 @@ class RBF
   private:
     void directPass(Representation &r)
     {
-        NeuroIO layerOutput;
-        NeuroIO layerInput(r.size());
 
-        for (int i = 0; i < r.size(); ++i) {
-            layerInput[i] = r[i];
+        NeuroIO rbfInp = r.getImpl();
+        NeuroIO rbfOutp(rbfLayer.size());
+        for(int neuron = 0; neuron < rbfLayer.size(); ++neuron) {
+            rbfOutp[neuron] = rbfLayer[neuron].induce(rbfInp);
         }
 
-        layerOutput.resize(outLayer.size());
-        for (int neuron = 0; neuron < outLayer.size(); ++neuron) {
-            layerOutput[neuron] = outLayer[neuron].induce(layerInput);
+        NeuroIO out(outLayer.size());
+        for(int neuron = 0; neuron < outLayer.size(); ++neuron) {
+            outLayer[neuron].induce(rbfOutp);
         }
-        layerInput = layerOutput;
     }
 
     void updateWeights(Representation &input)
     {
-        Representation layerInput = input;
         for (int neuron = 0; neuron < outLayer.size(); ++neuron) {
             outLayer[neuron].updateWeight();
         }
     }
 
+    //     δ_out = z - y
     void calcDeltas(NeuroIO &expected)
     {
-        calcOutDelta(outLayer, expected);
-        /* if (outLayer.size() > 1) { */
-        /*     calcHiddenDelta((outLayer[outLayer.size()-2]), outLayer.back());
-         */
-        /* } */
-    }
-
-    //     δh = ∑ δ_out⋅f'⋅whi
-    void calcHiddenDelta(Layer &layer, Layer &prevLayer)
-    {
-        for (int i = 0; i < layer.size(); ++i) {
-            float error = 0;
-            for (int prevN = 0; prevN < prevLayer.size(); ++prevN) {
-                error +=
-                    prevLayer[prevN].getDelta() * prevLayer[prevN].atWeight(i);
-            }
-            float out = layer[i].getOut();
-            layer[i].setDelta(out * (1 - out) * error);
+        for (int neuron = 0; neuron < outLayer.size(); ++neuron) {
+            float out = outLayer[neuron].getOut();
+            /* outLayer[neuron].setDelta(expected[neuron] - out); */
+            outLayer[neuron].setDelta(out * (1 - out) * (expected[neuron] - out));
         }
     }
 
-    //     δ_out = z - y
-    void calcOutDelta(Layer &layer, NeuroIO &expected)
-    {
-        for (int neuron = 0; neuron < layer.size(); ++neuron) {
-            float out = layer[neuron].getOut();
-            layer[neuron].setDelta(out * (1 - out) * (expected[neuron] - out));
-            layer[neuron].setDelta(expected[neuron] - out);
-        }
-    }
 
   public:
-    /* enum class WHAT : unsigned char { DELTAS, OUTPUTS }; */
-    /* std::string inspectLayers(WHAT what = WHAT::OUTPUTS) */
-    /* { */
-    /*     using namespace std; */
-    /*     string dumpStr; */
-    /*     for(int i = 0; i < outLayer.size(); ++i) { */
-    /*         dumpStr += string("Layer ") + to_string(i) + ": "; */
-    /*         dumpStr += inspectLayer(i, what) + "\n"; */
-    /*     } */
-    /*     return dumpStr; */
-    /* } */
+    enum class WHAT : unsigned char { DELTAS, OUTPUTS, WEIGHTS, RBF };
+    std::string inspectLayers(WHAT what = WHAT::OUTPUTS)
+    {
+        using namespace std;
+        string dumpStr;
+        /* for(int i = 0; i < outLayer.size(); ++i) { */
+        /*     dumpStr += string("Layer ") + to_string(i) + ": "; */
+        /*     dumpStr += inspectLayer(i, what) + "\n"; */
+        /* } */
+        return dumpStr;
+    }
 
-    /* std::string inspectOut(WHAT what = WHAT::OUTPUTS) { return
-     * inspectLayer(outLayer.size()-1, what); } */
-    /* std::string inspectLayer(int number, WHAT what = WHAT::OUTPUTS) */
-    /* { */
-    /*     using namespace std; */
-    /*     string dumpStr; */
-    /*     for(int j = 0; j < outLayer[number].size(); ++j) { */
-    /*         if(what == WHAT::OUTPUTS) { */
-    /*             dumpStr += to_string(outLayer[number][j].getOut()) + " "; */
-    /*         } else { */
-    /*             dumpStr += to_string(outLayer[number][j].getDelta()) + " ";
-     */
-    /*         } */
-    /*     } */
-    /*     return dumpStr; */
-    /* } */
+    std::string inspectOut(WHAT what = WHAT::OUTPUTS) { return inspectLayer(outLayer.size()-1, what); }
+    std::string inspectLayer(int number, WHAT what = WHAT::OUTPUTS)
+    {
+        using namespace std;
+        string dumpStr;
+        for(int j = 0; j < outLayer.size(); ++j) {
+            if(what == WHAT::OUTPUTS) {
+                dumpStr += to_string(outLayer[j].getOut()) + " ";
+            } else if(what == WHAT::DELTAS) {
+                 dumpStr += to_string(outLayer[j].getDelta()) + " ";
+            } else {
+                vector<float> weights = outLayer[j].getWeights();
+                for(int i = 0; i < weights.size(); ++i) {
+                    dumpStr += to_string(weights[i]) + " ";
+                    
+                }
+            }
+        }
+        return dumpStr;
+    }
     NeuroIO out()
     {
-        Layer &last = outLayer;
-        NeuroIO output(last.size());
-        for (int i = 0; i < last.size(); ++i) {
-            output[i] = last[i].getOut();
+        NeuroIO output(outLayer.size());
+        for (int i = 0; i < outLayer.size(); ++i) {
+            output[i] = outLayer[i].getOut();
         }
         return output;
     }

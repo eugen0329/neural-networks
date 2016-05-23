@@ -50,23 +50,58 @@ void iris()
         examples.push_back(Example(features, (*r)[4], tagsMap[(*r)[4]], tagsMap.size()));
     }
 
-    /* random_shuffle(examples.begin(), examples.end()); */
-
     RBF rbf(4, 3);
+    rbf.configureRBF(examples, tags);
+    random_shuffle(examples.begin(), examples.end());
     int errs = 0;
+    int rounds = 0;
     do {
         errs = 0;
-        for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) {
-            float err = rbf.train((*it).in(), (*it).out());
-            if(max_index((*it).out()) != max_index(rbf.out())) errs++;
+        for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
+            rbf.train(e->in(), e->out());
+            cout << rbf.inspectOut(RBF::WHAT::DELTAS) << endl;
+            if(max_index(e->out()) != max_index(rbf.out())) {
+                errs++;
+                /* cout << max_index(e->out()) << " <=> " << max_index(rbf.out()) << endl; */
+                /* for(int i = 0; i < rbf.out().size(); ++i) { */
+                /*     cout << rbf.out()[i] << ' '; */
+                /* } */
+                /* cout << endl; */
+                /* for(int i = 0; i < rbf.out().size(); ++i) { */
+                /*     cout << e->out()[i] << ' '; */
+                /* } */
+                /* cout << endl; */
+            }
         }
-        cout << errs / 100.0 << "\r";
+        cout << errs * 100.0 / examples.size() << "\r";
+        /* cout <<  "rounds: " << rounds++ << endl; */
     } while((errs / 100.0) > 0.05);
     errs = 0;
-    for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) {
-        /* NeuroIO result = rbf.classify((*it).in()); */
-        /* cout << max_index((*it).out()) << max_index(result) << endl; */
-        /* if(max_index((*it).out()) != max_index(rbf.out())) errs++; */
+
+    for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
+        NeuroIO result = rbf.classify(e->in());
+        /* cout << max_index(e->out()) << " <=> " << max_index(result) << endl; */
+
+
+        /* for(int i = 0; i < rbf.out().size(); ++i) { */
+        /*     cout << rbf.out()[i] << ' '; */
+        /* } */
+        /* cout << endl; */
+        /* for(int i = 0; i < rbf.out().size(); ++i) { */
+        /*     cout << e->out()[i] << ' '; */
+        /* } */
+        if(max_index(e->out()) != max_index(rbf.out())) {
+            errs++;
+            /* cout << rbf.inspectOut(RBF::WHAT::DELTAS) << endl; */
+            /* for(int i = 0; i < rbf.out().size(); ++i) { */
+            /*     cout << rbf.out()[i] << ' '; */
+            /* } */
+            /* cout << endl; */
+            /* for(int i = 0; i < rbf.out().size(); ++i) { */
+            /*     cout << e->out()[i] << ' '; */
+            /* } */
+            /* cout << endl; */
+        }
     }
     cout << errs / 100.0;
     cout << endl;

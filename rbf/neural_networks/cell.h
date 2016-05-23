@@ -41,7 +41,10 @@ public:
         for(int i = 0; i < inp.size(); ++i) {
             sum += pow(inp[i] - expectations[i], 2);
         }
-        outp = sqrt(sum);
+        /* outp = sum; */
+        /* outp = 199; */
+        /* cout << sum; */
+        outp = exp( -sum / squareDeviation );
         return outp;
     }
 };
