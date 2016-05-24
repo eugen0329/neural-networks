@@ -15,9 +15,8 @@ using namespace std;
 using namespace cv;
 using namespace Neural;
 
-#ifndef LEARNING_FACTOR
-#define LEARNING_FACTOR 0.15
-#define THRESHOLD 0.5
+#ifndef LEARNING_RATE
+#define LEARNING_RATE 0.15
 #endif
 
 typedef vector<float> NeuroIO;
@@ -36,19 +35,25 @@ public:
         weights.resize(inputsCount + 1);
         for(int i = 0; i < weights.size(); ++i) {
             /* weights[i] = randInRange(-1.0/(2.0*neuronsInLayer), 1.0/(2.0*neuronsInLayer)); */
-            weights[i] = randInRange(0, 1.0/(2.0*neuronsInLayer));
+            weights[i] = randInRange(0., 1);
+            /* weights[i] = randInRange(.0, 1.0); */
         }
     }
 
     void updateWeights(NeuroIO& neuronInp)
     {
+        winCount++;
         vector<float> inps = neuronInp;
-        vector<float> prevWeights = weights;
+
+        vector<float> tmp(inps.size());
+        transform(begin(inps), end(inps), begin(weights), begin(tmp), [](float i, float w) { return i-w; });
+        transform(begin(inps), end(inps), begin(tmp), begin(tmp), [](float i, float t) { return i + LEARNING_RATE*t; });
+        float div = euklidNorm(tmp);
+        /* div = 1; */
 
         for(int i = 0; i < weights.size(); ++i) {
-            weights[i] = prevWeights[i] + LEARNING_FACTOR*(inps[i] - prevWeights[i]);
+            weights[i] = (weights[i] + LEARNING_RATE*(inps[i] - weights[i])) / div;
         }
-        winCount += 1;
     }
 
     float sigmoid(float x)
@@ -58,12 +63,17 @@ public:
 
     float normalizedDelta(NeuroIO& neuronInp)
     {
+        return delta(neuronInp) * winCount;
+    }
+
+    float delta(NeuroIO& neuronInp)
+    {
         inp = neuronInp;
         float sum = 0;
         for (int i = 0; i < inp.size(); ++i) {
             sum += pow(inp[i] - weights[i], 2);
         }
-        return sqrt(sum) * winCount;
+        return sqrt(sum);
     }
 
     float induce(NeuroIO& neuronInp)
@@ -73,7 +83,7 @@ public:
         for(int i = 0; i < inp.size(); ++i) {
             sum += inp[i] * weights[i];
         }
-        outp = sum;
+        outp = sqrt(sum);
 
         return outp;
     }

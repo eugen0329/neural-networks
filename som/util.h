@@ -42,10 +42,10 @@ std::string inspectVec(std::vector<T> v)
     return dumped;
 }
 
-float norm(vector<float>& vec)
+float euklidNorm(const vector<float>& vec)
 {
-    vector<float> tmp = vec;
-    transform(begin(tmp), end(tmp), begin(tmp), begin(tmp), multiplies<float>());
+    vector<float> tmp(vec.size());
+    transform(begin(vec), end(vec), begin(tmp), [](const float& a) { return a*a; });
     return sqrt(accumulate(begin(tmp), end(tmp), 0.0));
 }
 

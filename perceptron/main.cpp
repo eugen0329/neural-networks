@@ -79,7 +79,6 @@ void images()
             } else {
                 errs++;
                 cout << "\033[31m✘\033[0m " << max_index(e->out()) << " != " << max_index(network.out()) << endl;
-
             }
         }
         cout << "Errors: " << errs * 1. / examples.size() << endl << endl;

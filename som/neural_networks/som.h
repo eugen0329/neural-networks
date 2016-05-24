@@ -50,36 +50,47 @@ class SOM {
     NeuroIO classify(Representation& input)
     {
         vector<float> inp = input.getImpl();
-        vector<float> tmp(inp.size());
+        float norm = euklidNorm(inp);
+        transform(begin(inp), end(inp), begin(inp), [&norm](const float& a) { return a / norm ; });
+
+        for(int i = 0; i < outp.size(); ++i) {
+            outp[i] = outLayer[i].induce(inp);
+        }
+
+        copy(outp.begin(), outp.end(), ostream_iterator<float>(cout, " ")); cout << endl;
 
         return outp;
     }
 
+
+
     float train(Representation &r)
     {
         NeuroIO inp = r.getImpl();
-        /* transform(begin(inp), end(inp), begin(inp), bind1st(divides<float>(), norm(inp))); */
+        float norm = euklidNorm(inp);
+        transform(begin(inp), end(inp), begin(inp), [&norm](const float& a) { return a / norm; });
 
-        vector<float> deltas(outLayer.size());
+        Neuron& winner = outLayer[winnerIndex(inp)];
+        winner.updateWeights(inp);
 
-        for(int i = 0; i < outLayer.size(); ++i) {
-            Neuron& neuron = outLayer[i];
-            deltas[i] = neuron.normalizedDelta(inp);
-        }
-
-        int winnerIndex = min_index(deltas);
-        /* cout << winnerIndex << endl; */
-
-        /* copy(network.out().begin(), network.out().end(), ostream_iterator<float>(cout, " ")); */
+        /* copy(winner.weights.begin(), winner.weights.end(), ostream_iterator<float>(cout, " ")); */
         /* cout << endl; */
-        outLayer[winnerIndex].updateWeights(inp);
 
-        for(int i = 0; i < outLayer.size(); ++i) {
-            Neuron& neuron = outLayer[i];
-            outp[i] = neuron.induce(inp);
-        }
-        return 0;
+        return winner.delta(inp);
+        return winner.normalizedDelta(inp);
     }
+
+    int winnerIndex(NeuroIO& inp)
+    {
+        vector<float> deltas(outLayer.size());
+        for(int i = 0; i < outLayer.size(); ++i) {
+            deltas[i] = outLayer[i].normalizedDelta(inp);
+        }
+
+        return min_index(deltas);
+    }
+
+
 
     NeuroIO& out() { return outp; }
 };

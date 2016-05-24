@@ -44,40 +44,43 @@ void iris()
 
     Examples examples;
     readIrisDB(examples, "iris.csv");
-    random_shuffle(examples.begin(), examples.end());
+    /* random_shuffle(examples.begin(), examples.end()); */
 
+    /* transform(begin(examples), end(examles), begin(examples), [&examples]()) */
 
     int errs = 0;
+    float avgDelta = 0.;
+    float maxDelta = 0.05;
     int clustersCount = tagsMap.size();
+    int trainIterations = 0;
     SOM network(4, clustersCount);
-    for(int i = 0; i < 10000; ++i) {
-        errs = 0;
+    do {
+        avgDelta = 0.;
         for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
-            network.train(e->in());
-
-            cout << max_index(e->out()) << max_index(network.out()) << '\n';
-            if(max_index(e->out()) != max_index(network.out())) {
-                errs++;
-            }
-            /* copy(network.out().begin(), network.out().end(), ostream_iterator<float>(cout, " ")); */
-            /* cout << endl; */
+            float delta = network.train(e->in());
+            avgDelta += delta;
+            trainIterations++;
         }
-        cout << errs * 1. / examples.size()  << endl;
-    }
-    return;
+        avgDelta /= examples.size();
+        cout << "\r" << avgDelta;
+    } while(avgDelta > 0.14);
+
+    cout << endl << "Trained in " << trainIterations << " iterations" << endl;
 
     cout << "Expected | Got" << endl;
     for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
         NeuroIO result = network.classify(e->in());
 
-        if(max_index(e->out()) != max_index(network.out())) {
-            /* errs++; */
-            cout << "\033[31m✘\033[0m " << max_index(e->out()) << " != " << max_index(result) << endl;
+        int expected = max_index(e->out()), got = max_index(network.out());
+
+        if(expected == got) {
+            cout << "\033[32m✔\033[0m " << expected << " == " << got << endl;
         } else {
-            cout << "  " << max_index(e->out()) << " == " << max_index(result) << endl;
+            errs++;
+            cout << "\033[31m✘\033[0m " << expected << " != " << got << endl;
         }
     }
-    /* cout << "Err rate: " << errs * 100. / examples.size() << "%"; */
+    cout << "Errors: " << errs * 1. / examples.size() << endl << endl;
     cout << endl;
 }
 
