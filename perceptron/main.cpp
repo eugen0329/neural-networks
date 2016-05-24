@@ -53,14 +53,14 @@ void images()
                          {Example(imread("examples/7.1.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "7", 4, 5)},
                          {Example(imread("examples/7.2.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "7", 4, 5)}};
 
-    Perceptron perceptron(examples[0].in().size(), examples[0].out().size(), {100});
+    Perceptron network(examples[0].in().size(), examples[0].out().size(), {100});
 
     int errs = 0;
     do {
         errs = 0;
         for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
-            float err = perceptron.train(e->in(), e->out());
-            if(max_index(e->out()) != max_index(perceptron.out())) errs++;
+            float err = network.train(e->in(), e->out());
+            if(max_index(e->out()) != max_index(network.out())) errs++;
         }
         cout << errs * 1./ examples.size() << "\r";
     } while((errs * 1. / examples.size()) > 0.01);
@@ -72,19 +72,18 @@ void images()
         cout << "Noise level: " << noiseLevels[i] << "%" << endl;
         for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
             Representation in = e->in();
-            NeuroIO result = perceptron.classify(in.apply_noise(noiseLevels[i]));
+            NeuroIO result = network.classify(in.apply_noise(noiseLevels[i]));
 
-            if(max_index(e->out()) == max_index(perceptron.out())) {
-                errs++;
-                cout << "\033[32m✔\033[0m " << max_index(e->out()) << " == " << max_index(perceptron.out()) << endl;
+            if(max_index(e->out()) == max_index(network.out())) {
+                cout << "\033[32m✔\033[0m " << max_index(e->out()) << " == " << max_index(network.out()) << endl;
             } else {
-                cout << "\033[31m✘\033[0m " << max_index(e->out()) << " != " << max_index(perceptron.out()) << endl;
+                errs++;
+                cout << "\033[31m✘\033[0m " << max_index(e->out()) << " != " << max_index(network.out()) << endl;
 
             }
         }
         cout << "Errors: " << errs * 1. / examples.size() << endl << endl;
     }
-    cout << endl;
 }
 
 void iris()
