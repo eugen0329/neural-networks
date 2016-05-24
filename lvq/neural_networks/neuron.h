@@ -16,7 +16,7 @@ using namespace cv;
 using namespace Neural;
 
 #ifndef LEARNING_RATE
-#define LEARNING_RATE 0.05
+#define LEARNING_RATE 0.15
 #endif
 
 typedef vector<float> NeuroIO;
@@ -58,6 +58,7 @@ public:
         return 1.0 / (1 + exp(-x));
     }
 
+    // CWTA (Conscience Winner Takes All) implementation
     float normalizedDelta(NeuroIO& neuronInp)
     {
         return delta(neuronInp) * winCount;

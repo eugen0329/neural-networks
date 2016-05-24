@@ -20,6 +20,8 @@
 #include "util.h"
 #include "neural_networks/lvq.h"
 
+#define MAX_TRAIN_ITERATIONS 100000
+
 using namespace std;
 using namespace cv;
 using namespace Neural;
@@ -30,8 +32,12 @@ void readIrisDB(Examples& examples, string path);
 
 int main(int argc, char *argv[])
 {
-    /* images(); */
+    cout << "IRIS DATABASE TEST" << endl
+         << "==================" << endl;
     iris();
+    cout << "IMAGES TEST" << endl
+         << "========== " << endl;
+    images();
     return 0;
 }
 
@@ -53,7 +59,7 @@ void iris()
     int clustersSize = 3;
     int inputsSize = examples.front().in().size();
     LVQNetwork network(inputsSize, clustersSize);
-    cout << "#Clusters: " << clustersSize << ", #inputs: " << inputsSize << endl;
+    float lastAvg = 0;
     do {
         avgDelta = 0.;
         for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
@@ -63,7 +69,10 @@ void iris()
         }
         avgDelta /= examples.size();
         cout << "\r" << avgDelta;
-    } while(avgDelta > 0.07);
+
+        if(lastAvg == avgDelta || trainIterations > MAX_TRAIN_ITERATIONS) break;
+        lastAvg = 0;
+    } while(avgDelta > 0.05);
 
     for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
         e->setOut(network.classify(e->in()));
@@ -121,9 +130,9 @@ void images()
         }
         avgDelta /= examples.size();
         cout << "\r" << avgDelta;
-        if(lastAvg == avgDelta) break;
+        if(lastAvg == avgDelta || trainIterations > MAX_TRAIN_ITERATIONS) break;
         lastAvg = avgDelta;
-    } while(avgDelta > 0.10);
+    } while(avgDelta > 0.05);
 
     cout << "\r" << endl << "Trained in " << trainIterations << " iterations" << endl;
 
@@ -131,7 +140,7 @@ void images()
         e->out() = network.classify(e->in());
     }
 
-    vector<float> noiseLevels = {0, 2, 3, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90};
+    vector<float> noiseLevels = {0, 2, 3, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 92, 95, 96, 97, 98, 99, 100};
     for(int i = 0; i < noiseLevels.size(); ++i) {
         errs = 0;
         cout << "Noise level: \033[4m" << noiseLevels[i] << "%\033[0m" << endl;
