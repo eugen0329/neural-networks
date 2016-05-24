@@ -34,8 +34,9 @@ void images();
 
 int main(int argc, char *argv[])
 {
-    /* images(); */
-    iris();
+    setlocale(LC_ALL, "");
+    images();
+    /* iris(); */
     return 0;
 }
 
@@ -57,23 +58,32 @@ void images()
     int errs = 0;
     do {
         errs = 0;
-        for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) {
-            float err = perceptron.train((*it).in(), (*it).out());
-            if(max_index((*it).out()) != max_index(perceptron.out())) errs++;
+        for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
+            float err = perceptron.train(e->in(), e->out());
+            if(max_index(e->out()) != max_index(perceptron.out())) errs++;
         }
-        cout << errs * 100.0 / examples.size() << "\r";
-    } while((errs * 100.0 / examples.size()) > 0.01);
+        cout << errs * 1./ examples.size() << "\r";
+    } while((errs * 1. / examples.size()) > 0.01);
 
-    vector<float> noiseLevels = {2, 3, 5};
-    for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) {
-        for(int i = 0; i < noiseLevels.size(); ++i) {
-            Representation in = (*it).in();
+
+    vector<float> noiseLevels = {0, 2, 3, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90};
+    for(int i = 0; i < noiseLevels.size(); ++i) {
+        errs = 0;
+        cout << "Noise level: " << noiseLevels[i] << "%" << endl;
+        for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
+            Representation in = e->in();
             NeuroIO result = perceptron.classify(in.apply_noise(noiseLevels[i]));
-            cout << max_index((*it).out()) << max_index(result) << endl;
-            if(max_index((*it).out()) != max_index(perceptron.out())) errs++;
+
+            if(max_index(e->out()) == max_index(perceptron.out())) {
+                errs++;
+                cout << "\033[32m✔\033[0m " << max_index(e->out()) << " == " << max_index(perceptron.out()) << endl;
+            } else {
+                cout << "\033[31m✘\033[0m " << max_index(e->out()) << " != " << max_index(perceptron.out()) << endl;
+
+            }
         }
+        cout << "Errors: " << errs * 1. / examples.size() << endl << endl;
     }
-    cout << errs / 100.0;
     cout << endl;
 }
 
@@ -94,16 +104,16 @@ void iris()
     do {
         errs = 0;
         for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) {
-            float err = perceptron.train((*it).in(), (*it).out());
-            if(max_index((*it).out()) != max_index(perceptron.out())) errs++;
+            float err = perceptron.train(it->in(), it->out());
+            if(max_index(it->out()) != max_index(perceptron.out())) errs++;
         }
         cout << errs / 100.0 << "\r";
     } while((errs / 100.0) > 0.05);
     errs = 0;
     for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) {
-        NeuroIO result = perceptron.classify((*it).in());
-        cout << max_index((*it).out()) << max_index(result) << endl;
-        if(max_index((*it).out()) != max_index(perceptron.out())) errs++;
+        NeuroIO result = perceptron.classify(it->in());
+        cout << max_index(it->out()) << max_index(result) << endl;
+        if(max_index(it->out()) != max_index(perceptron.out())) errs++;
     }
     cout << errs / 100.0;
     cout << endl;
