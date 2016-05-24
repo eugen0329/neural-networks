@@ -42,10 +42,23 @@ std::string inspectVec(std::vector<T> v)
     return dumped;
 }
 
+float norm(vector<float>& vec)
+{
+    vector<float> tmp = vec;
+    transform(begin(tmp), end(tmp), begin(tmp), begin(tmp), multiplies<float>());
+    return sqrt(accumulate(begin(tmp), end(tmp), 0.0));
+}
+
 template<class T>
 int max_index(T it)
 {
     return std::distance(it.begin(), std::max_element(it.begin(), it.end()));
+}
+
+template<class T>
+int min_index(T it)
+{
+    return std::distance(it.begin(), std::min_element(it.begin(), it.end()));
 }
 
 

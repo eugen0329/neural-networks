@@ -48,7 +48,7 @@ void iris()
         examples.push_back(Example(features, (*r)[4], tagsMap[(*r)[4]], tagsMap.size()));
     }
 
-    Cohen network(4, 3, examples.size());
+    Cohen network(4, 3);
     random_shuffle(examples.begin(), examples.end());
     int errs = 0;
     int rounds = 0;
@@ -56,11 +56,16 @@ void iris()
         errs = 0;
         for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
             network.train(e->in(), e->out());
+            /* cout << network.inspectOut(Cohen::WHAT::OUTS) << endl; */
+
+            copy(network.out().begin(), network.out().end(), ostream_iterator<float>(cout, " "));
+            /* copy(e->out().begin(), e->out().end(), ostream_iterator<float>(cout, " ")); */
+            cout << endl;
             if(max_index(e->out()) != max_index(network.out())) {
                 errs++;
             }
         }
-        cout << errs * 100.0 / examples.size() << "%\r";
+        /* cout << errs * 100.0 / examples.size() << "%\r"; */
     } while(((float) errs / examples.size()) > 0.05);
     errs = 0;
 

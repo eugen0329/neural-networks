@@ -27,9 +27,9 @@ class Neuron {
     NeuroIO inp;
     float delta;
 
-    vector<float> weights;
-
 public:
+    vector<float> weights;
+    int winCount = 0;
     Neuron() {}
 
     void build(int inputsCount, int neuronsInLayer)
@@ -40,13 +40,29 @@ public:
         }
     }
 
-    void updateWeight()
+    void updateWeights(NeuroIO& neuronInp)
     {
-        Representation inputs = inp;
-        /* inputs.push_back(-1); */
+        vector<float> inps = neuronInp;
+        vector<float> prevWeights = weights;
+
+        vector<float> tmp(weights.size());
+        // div =|wj(t) + (x - wj(t))| =>
+        //    tmp = (x - wj(t)
+        transform(begin(inps), end(inps), begin(weights), begin(tmp), minus<float>());
+        //    tmp *= LEARNING_FACTOR
+        transform(begin(tmp), end(tmp), begin(tmp), bind1st(multiplies<float>(), LEARNING_FACTOR));
+        //    tmp = wj(t) + tmp
+        transform(begin(tmp), end(tmp), begin(weights), begin(tmp), plus<float>());
+        //    tmp = tmp ** 2
+        transform(begin(tmp), end(tmp), begin(tmp), begin(tmp), multiplies<float>());
+        //    div = |tmp|
+        float div = sqrt(accumulate(begin(tmp), end(tmp), 0.0));
+
         for(int i = 0; i < weights.size(); ++i) {
-            weights[i] += LEARNING_FACTOR *  delta * inputs[i];
+            weights[i] = (prevWeights[i] + LEARNING_FACTOR*(inps[i] - prevWeights[i])) / div;
         }
+
+        winCount += 1;
     }
 
     float sigmoid(float x)
@@ -66,22 +82,7 @@ public:
         return outp;
     }
 
-    vector<float>& getWeights()
-    {
-        return weights;
-    }
-
-    float atWeight(int i)
-    {
-        return weights[i];
-    }
-
     float getOut()
-    {
-        return outp;
-    }
-
-    float getIn()
     {
         return outp;
     }

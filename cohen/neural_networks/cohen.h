@@ -17,7 +17,6 @@
 #include "../util.h"
 #include "neuron.h"
 #include "example.h"
-#include "cell.h"
 
 using namespace std;
 using namespace cv;
@@ -34,75 +33,82 @@ class Cohen {
     Layer outLayer;
 
     int inSize;
+    vector<float> outp;
 
   public:
-    Cohen(int inSize, int outSize, int hiddenSize)
+    Cohen(int inSize, int outSize)
     {
         this->inSize = inSize;
         outLayer.resize(outSize);
-        int nLayerInputs = hiddenSize;
+
         for (int neuron = 0; neuron < outSize; ++neuron) {
-            outLayer[neuron].build(nLayerInputs, outSize);
+            outLayer[neuron].build(inSize, outSize);
         }
     }
 
     NeuroIO classify(Representation& input)
     {
-        directPass(input);
-        NeuroIO klass(outLayer.size());
-        for(int i = 0; i < klass.size(); ++i) {
-            klass[i] = outLayer[i].getOut();
+        vector<float> inp = input.getImpl();
+        vector<float> tmp(inp.size());
+
+        tmp = inp;
+        transform(begin(tmp), end(tmp), begin(tmp), begin(tmp), multiplies<float>());
+        float inpModule = sqrt(accumulate(begin(tmp), end(tmp), 0.0));
+
+        for(int neurIter = 0; neurIter < outLayer.size(); ++neurIter) {
+            outLayer[neurIter].weights;
+            transform(begin(inp), end(inp), begin(outLayer[neurIter].weights), begin(tmp), multiplies<float>());
+            float numerator = accumulate(begin(tmp), end(tmp), 0.0);
+
+            tmp = outLayer[neurIter].weights;
+            transform(begin(tmp), end(tmp), begin(tmp), begin(tmp), multiplies<float>());
+            float weightsModule = sqrt(accumulate(begin(tmp), end(tmp), 0.0));
+
+            outp[neurIter] = numerator / (inpModule * weightsModule);
+            if(outp[neurIter] > 1.0) {
+                cout << outp[neurIter];
+                exit(1);
+            }
         }
 
-        return klass;
+        return outp;
     }
 
-    float train(Representation &inp, NeuroIO expected)
+    float train(Representation &r, NeuroIO expected)
     {
-        directPass(inp);
-        calcDeltas(expected);
-        updateWeights(inp);
-        return errRate(expected);
-    }
+        NeuroIO inp = r.getImpl();
+        transform(begin(inp), end(inp), begin(inp), bind1st(divides<float>(), norm(inp)));
 
-    float errRate(NeuroIO &expected)
-    {
-        Layer &l = outLayer;
-        float sum = 0.;
-        for (int neuron = 0; neuron < l.size(); ++neuron) {
-            sum += pow(expected[neuron] - l[neuron].getOut(), 2);
+        outp.resize(outLayer.size());
+        vector<float> delta(inp.size());
+
+        for(int neurIter = 0; neurIter < outLayer.size(); ++neurIter) {
+            Neuron& neuron = outLayer[neurIter];
+            // delta = (X - W)
+            transform(begin(inp), end(inp), begin(neuron.weights), begin(delta), minus<float>());
+            // delta *= delta
+            transform(begin(delta), end(delta), begin(delta), begin(delta), multiplies<float>());
+            // len = |delta|
+            float module = sqrt(accumulate(begin(delta), end(delta), 0.0));
+
+            /* cout << module; */
+            outp[neurIter] = module * neuron.winCount;
+            /* outp[neurIter] = module; */
+            /* if(outp[neurIter] > 1.0) { */
+            /*     cout << outp[neurIter]; */
+            /*     exit(1); */
+            /* } */
         }
-        return 0.5 * sum;
+        int winnerInd = min_index(outp);
+        outLayer[winnerInd].updateWeights(inp);
+        classify(r);
+
+        return 0;
     }
 
   private:
 
-    void directPass(Representation &r)
-    {
-        NeuroIO inp = r.getImpl();
-        for(int neuron = 0; neuron < outLayer.size(); ++neuron) {
-            outLayer[neuron].induce(inp);
-        }
-    }
-
-    void updateWeights(Representation &input)
-    {
-        for (int neuron = 0; neuron < outLayer.size(); ++neuron) {
-            outLayer[neuron].updateWeight();
-        }
-    }
-
     //     δ_out = z - y
-    void calcDeltas(NeuroIO &expected)
-    {
-        for (int neuron = 0; neuron < outLayer.size(); ++neuron) {
-            float out = outLayer[neuron].getOut();
-            /* outLayer[neuron].setDelta(expected[neuron] - out); */
-            outLayer[neuron].setDelta(out * (1 - out) * (expected[neuron] - out));
-        }
-    }
-
-
   public:
     enum class WHAT : unsigned char { DELTAS, OUTPUTS, WEIGHTS, RBF };
     std::string inspectLayers(WHAT what = WHAT::OUTPUTS)
@@ -127,22 +133,21 @@ class Cohen {
             } else if(what == WHAT::DELTAS) {
                  dumpStr += to_string(outLayer[j].getDelta()) + " ";
             } else {
-                vector<float> weights = outLayer[j].getWeights();
+                vector<float> weights = outLayer[j].weights;
                 for(int i = 0; i < weights.size(); ++i) {
                     dumpStr += to_string(weights[i]) + " ";
-
                 }
             }
         }
         return dumpStr;
     }
-    NeuroIO out()
+    NeuroIO& out()
     {
-        NeuroIO output(outLayer.size());
-        for (int i = 0; i < outLayer.size(); ++i) {
-            output[i] = outLayer[i].getOut();
-        }
-        return output;
+        /* NeuroIO output(outLayer.size()); */
+        /* for (int i = 0; i < outLayer.size(); ++i) { */
+        /*     output[i] = outLayer[i].getOut(); */
+        /* } */
+        return outp;
     }
 };
 
