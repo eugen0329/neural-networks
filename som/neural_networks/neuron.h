@@ -23,20 +23,20 @@ using namespace Neural;
 typedef vector<float> NeuroIO;
 
 class Neuron {
-    float outp;
-    NeuroIO inp;
-    float delta;
 
 public:
+    float outp;
+    NeuroIO inp;
     vector<float> weights;
-    int winCount = 0;
+    int winCount = 1;
     Neuron() {}
 
     void build(int inputsCount, int neuronsInLayer)
     {
         weights.resize(inputsCount + 1);
         for(int i = 0; i < weights.size(); ++i) {
-            weights[i] = randInRange(-1.0/(2.0*neuronsInLayer), 1.0/(2.0*neuronsInLayer));
+            /* weights[i] = randInRange(-1.0/(2.0*neuronsInLayer), 1.0/(2.0*neuronsInLayer)); */
+            weights[i] = randInRange(0, 1.0/(2.0*neuronsInLayer));
         }
     }
 
@@ -45,23 +45,9 @@ public:
         vector<float> inps = neuronInp;
         vector<float> prevWeights = weights;
 
-        vector<float> tmp(weights.size());
-        // div =|wj(t) + (x - wj(t))| =>
-        //    tmp = (x - wj(t)
-        transform(begin(inps), end(inps), begin(weights), begin(tmp), minus<float>());
-        //    tmp *= LEARNING_FACTOR
-        transform(begin(tmp), end(tmp), begin(tmp), bind1st(multiplies<float>(), LEARNING_FACTOR));
-        //    tmp = wj(t) + tmp
-        transform(begin(tmp), end(tmp), begin(weights), begin(tmp), plus<float>());
-        //    tmp = tmp ** 2
-        transform(begin(tmp), end(tmp), begin(tmp), begin(tmp), multiplies<float>());
-        //    div = |tmp|
-        float div = sqrt(accumulate(begin(tmp), end(tmp), 0.0));
-
         for(int i = 0; i < weights.size(); ++i) {
-            weights[i] = (prevWeights[i] + LEARNING_FACTOR*(inps[i] - prevWeights[i])) / div;
+            weights[i] = prevWeights[i] + LEARNING_FACTOR*(inps[i] - prevWeights[i]);
         }
-
         winCount += 1;
     }
 
@@ -70,32 +56,31 @@ public:
         return 1.0 / (1 + exp(-x));
     }
 
+    float normalizedDelta(NeuroIO& neuronInp)
+    {
+        inp = neuronInp;
+        float sum = 0;
+        for (int i = 0; i < inp.size(); ++i) {
+            sum += pow(inp[i] - weights[i], 2);
+        }
+        return sqrt(sum) * winCount;
+    }
+
     float induce(NeuroIO& neuronInp)
     {
         inp = neuronInp;
-        /* inp.push_back(-1); */
         float sum = 0.0;
         for(int i = 0; i < inp.size(); ++i) {
             sum += inp[i] * weights[i];
         }
-        outp = sigmoid(sum);
+        outp = sum;
+
         return outp;
     }
 
     float getOut()
     {
         return outp;
-    }
-
-    float setDelta(float newDelta)
-    {
-        delta = newDelta;
-        return delta;
-    }
-
-    float getDelta()
-    {
-        return delta;
     }
 
 };

@@ -18,7 +18,7 @@
 #include "neural_networks/example.h"
 #include "csv_iterator.h"
 #include "util.h"
-#include "neural_networks/cohen.h"
+#include "neural_networks/som.h"
 
 using namespace std;
 using namespace cv;
@@ -26,6 +26,7 @@ using namespace Neural;
 
 void iris();
 void images();
+void readIrisDB(Examples& examples, string path);
 
 int main(int argc, char *argv[])
 {
@@ -35,52 +36,48 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+map<string, int> tagsMap = {{"Iris-setosa", 0}, {"Iris-versicolor", 1}, {"Iris-virginica", 2}};
 void iris()
 {
-    map<string, int> tagsMap = {{"Iris-setosa", 0}, {"Iris-versicolor", 1}, {"Iris-virginica", 2}};
     vector<int> tags;
     values(tagsMap, tags);
 
-    std::ifstream       file("iris.csv");
     Examples examples;
-    for(CSVIterator r(file);r != CSVIterator();++r) {
-        std::vector<float> features = {stof((*r)[0]), stof((*r)[1]), stof((*r)[2]), stof((*r)[3])};
-        examples.push_back(Example(features, (*r)[4], tagsMap[(*r)[4]], tagsMap.size()));
-    }
-
-    Cohen network(4, 3);
+    readIrisDB(examples, "iris.csv");
     random_shuffle(examples.begin(), examples.end());
+
+
     int errs = 0;
-    int rounds = 0;
-    do {
+    int clustersCount = tagsMap.size();
+    SOM network(4, clustersCount);
+    for(int i = 0; i < 10000; ++i) {
         errs = 0;
         for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
-            network.train(e->in(), e->out());
-            /* cout << network.inspectOut(Cohen::WHAT::OUTS) << endl; */
+            network.train(e->in());
 
-            copy(network.out().begin(), network.out().end(), ostream_iterator<float>(cout, " "));
-            /* copy(e->out().begin(), e->out().end(), ostream_iterator<float>(cout, " ")); */
-            cout << endl;
+            cout << max_index(e->out()) << max_index(network.out()) << '\n';
             if(max_index(e->out()) != max_index(network.out())) {
                 errs++;
             }
+            /* copy(network.out().begin(), network.out().end(), ostream_iterator<float>(cout, " ")); */
+            /* cout << endl; */
         }
-        /* cout << errs * 100.0 / examples.size() << "%\r"; */
-    } while(((float) errs / examples.size()) > 0.05);
-    errs = 0;
+        cout << errs * 1. / examples.size()  << endl;
+    }
+    return;
 
     cout << "Expected | Got" << endl;
     for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
         NeuroIO result = network.classify(e->in());
 
         if(max_index(e->out()) != max_index(network.out())) {
-            errs++;
+            /* errs++; */
             cout << "\033[31m✘\033[0m " << max_index(e->out()) << " != " << max_index(result) << endl;
         } else {
             cout << "  " << max_index(e->out()) << " == " << max_index(result) << endl;
         }
     }
-    cout << "Err rate: " << errs * 100. / examples.size() << "%";
+    /* cout << "Err rate: " << errs * 100. / examples.size() << "%"; */
     cout << endl;
 }
 
@@ -120,4 +117,14 @@ void images()
     /* } */
     /* cout << errs / 100.0; */
     /* cout << endl; */
+}
+
+void readIrisDB(Examples& examples, string path)
+{
+   
+    std::ifstream       file(path);
+    for(CSVIterator r(file);r != CSVIterator();++r) {
+        std::vector<float> features = {stof((*r)[0]), stof((*r)[1]), stof((*r)[2]), stof((*r)[3])};
+        examples.push_back(Example(features, (*r)[4], tagsMap[(*r)[4]], tagsMap.size()));
+    }
 }
