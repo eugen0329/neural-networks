@@ -120,12 +120,12 @@ void images()
             Representation in = e->in();
             NeuroIO result = network.classify(in.apply_noise(noiseLevels[i]));
 
-            if(max_index(e->out()) == max_index(network.out())) {
-                cout << "\033[32m✔\033[0m " << max_index(e->out()) << " == " << max_index(network.out()) << endl;
+            int expected = max_index(e->out()), got = max_index(network.out());
+            if(expected == got) {
+                cout << "\033[32m✔\033[0m " << expected << " == " << got << endl;
             } else {
                 errs++;
-                cout << "\033[31m✘\033[0m " << max_index(e->out()) << " != " << max_index(network.out()) << endl;
-
+                cout << "\033[31m✘\033[0m " << expected << " != " << got << endl;
             }
         }
         cout << "Errors: " << errs * 1. / examples.size() << endl << endl;

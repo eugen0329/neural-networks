@@ -31,8 +31,8 @@ void readIrisDB(Examples& examples, string path);
 int main(int argc, char *argv[])
 {
     setlocale(LC_ALL, "");
-    /* images(); */
-    iris();
+    images();
+    /* iris(); */
     return 0;
 }
 
@@ -72,7 +72,6 @@ void iris()
         NeuroIO result = network.classify(e->in());
 
         int expected = max_index(e->out()), got = max_index(network.out());
-
         if(expected == got) {
             cout << "\033[32m✔\033[0m " << expected << " == " << got << endl;
         } else {
@@ -86,40 +85,53 @@ void iris()
 
 void images()
 {
-    /* Examples examples = {{Example(imread("examples/2.1.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "2", 0, 5)}, */
-    /*                      {Example(imread("examples/2.2.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "2", 0, 5)}, */
-    /*                      {Example(imread("examples/3.1.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "3", 1, 5)}, */
-    /*                      {Example(imread("examples/3.2.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "3", 1, 5)}, */
-    /*                      {Example(imread("examples/4.1.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "4", 2, 5)}, */
-    /*                      {Example(imread("examples/4.2.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "4", 2, 5)}, */
-    /*                      {Example(imread("examples/5.1.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "5", 3, 5)}, */
-    /*                      {Example(imread("examples/5.2.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "6", 3, 5)}, */
-    /*                      {Example(imread("examples/7.1.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "7", 4, 5)}, */
-    /*                      {Example(imread("examples/7.2.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "7", 4, 5)}}; */
+    Examples examples = {{Example(imread("examples/2.1.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "2", 0, 5)},
+                         {Example(imread("examples/2.2.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "2", 0, 5)},
+                         {Example(imread("examples/3.1.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "3", 1, 5)},
+                         {Example(imread("examples/3.2.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "3", 1, 5)},
+                         {Example(imread("examples/4.1.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "4", 2, 5)},
+                         {Example(imread("examples/4.2.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "4", 2, 5)},
+                         {Example(imread("examples/5.1.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "5", 3, 5)},
+                         {Example(imread("examples/5.2.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "6", 3, 5)},
+                         {Example(imread("examples/7.1.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "7", 4, 5)},
+                         {Example(imread("examples/7.2.png", CV_LOAD_IMAGE_GRAYSCALE), 180, "7", 4, 5)}};
+    int errs = 0;
+    float avgDelta = 0.;
+    float maxDelta = 0.05;
+    int clustersCount = tagsMap.size();
+    int trainIterations = 0;
+    SOM network(4, clustersCount);
+    do {
+        avgDelta = 0.;
+        for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
+            float delta = network.train(e->in());
+            avgDelta += delta;
+            trainIterations++;
+        }
+        avgDelta /= examples.size();
+        cout << "\r" << avgDelta;
+    } while(avgDelta > 0.74);
 
-    /* Perceptron perceptron(examples[0].in().size(), examples[0].out().size(), {100}); */
+    cout << endl << "Trained in " << trainIterations << " iterations" << endl;
 
-    /* int errs = 0; */
-    /* do { */
-    /*     errs = 0; */
-    /*     for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) { */
-    /*         float err = perceptron.train((*it).in(), (*it).out()); */
-    /*         if(max_index((*it).out()) != max_index(perceptron.out())) errs++; */
-    /*     } */
-    /*     cout << errs / 100.0 << "\r"; */
-    /* } while((errs / 100.0) > 0.05); */
+    vector<float> noiseLevels = {0, 2, 3, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90};
+    for(int i = 0; i < noiseLevels.size(); ++i) {
+        errs = 0;
+        cout << "Noise level: " << noiseLevels[i] << "%" << endl;
+        for(Examples::iterator e = examples.begin(); e != examples.end(); ++e) {
+            Representation in = e->in();
+            NeuroIO result = network.classify(in.apply_noise(noiseLevels[i]));
 
-    /* vector<float> noiseLevels = {2, 3, 5}; */
-    /* for(Examples::iterator it = examples.begin(); it != examples.end(); ++it) { */
-    /*     for(int i = 0; i < noiseLevels.size(); ++i) { */
-    /*         Representation in = (*it).in(); */
-    /*         NeuroIO result = perceptron.classify(in.apply_noise(noiseLevels[i])); */
-    /*         cout << max_index((*it).out()) << max_index(result) << endl; */
-    /*         if(max_index((*it).out()) != max_index(perceptron.out())) errs++; */
-    /*     } */
-    /* } */
-    /* cout << errs / 100.0; */
-    /* cout << endl; */
+            int expected = max_index(e->out()), got = max_index(network.out());
+            if(expected == got) {
+                cout << "\033[32m✔\033[0m " << expected << " == " << got << endl;
+            } else {
+                errs++;
+                cout << "\033[31m✘\033[0m " << expected << " != " << got << endl;
+            }
+        }
+        cout << "Errors: " << errs * 1. / examples.size() << endl << endl;
+    }
 }
 
 void readIrisDB(Examples& examples, string path)

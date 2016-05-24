@@ -57,8 +57,7 @@ class SOM {
             outp[i] = outLayer[i].induce(inp);
         }
 
-        copy(outp.begin(), outp.end(), ostream_iterator<float>(cout, " ")); cout << endl;
-
+        /* copy(outp.begin(), outp.end(), ostream_iterator<float>(cout, " ")); cout << endl; */
         return outp;
     }
 

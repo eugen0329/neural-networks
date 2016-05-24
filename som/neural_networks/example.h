@@ -19,7 +19,7 @@ class Example {
         int i = 0;
         for(int y = 0; y < img.rows; ++y) {
             for(int x = 0; x < img.cols; ++x) {
-                representation[i] = img.at<uchar>(y, x) < 180 ? 0 : 1;
+                representation[i] = img.at<uchar>(y, x);
                 i++;
             }
         }
